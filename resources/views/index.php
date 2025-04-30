@@ -28,14 +28,14 @@
             text-align: center;
         }
 
-
+     
     </style>
 </head>
 <body>
     <div class="container">
-        <div>
+        <div class="text-logo" >
             <h1>Bem vindo a Rock Code Labs</h1>
-            <p>Site em Construção com Vue.js</p>
+            <p>Site em Construção com Vue.js<³/p>
         </div>
     </div>
 </body>
