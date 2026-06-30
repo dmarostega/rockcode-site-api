@@ -6,7 +6,7 @@ Endpoint publico para receber eventos anonimos de produto da Rock Code Labs.
 
 `POST /api/analytics/events`
 
-Rate limit: 30 requisicoes por minuto por origem.
+Rate limit: 30 requisicoes por minuto por IP resolvido.
 
 ## Ambiente publico
 
@@ -23,6 +23,8 @@ TRUSTED_PROXIES=REMOTE_ADDR
 ```
 
 Use IPs ou CIDRs conhecidos quando o trafego puder chegar diretamente no servidor. Use `REMOTE_ADDR` quando o servidor de aplicacao receber chamadas somente do proxy imediatamente anterior. Evite `*` em producao se o app puder receber requisicoes diretas, porque headers `X-Forwarded-*` poderiam ser forjados pelo cliente.
+
+Se `TRUSTED_PROXIES=REMOTE_ADDR` for usado, bloqueie acesso direto ao origin por firewall, Nginx, Cloudflare ou regra equivalente. Se o origin precisar aceitar trafego direto, prefira uma lista explicita de IPs/CIDRs confiaveis do proxy.
 
 Com proxies confiaveis configurados, o rate limit `analytics-events` usa o IP real resolvido por `$request->ip()`. Sem essa configuracao, varias pessoas podem ser agrupadas pelo IP do proxy.
 
@@ -115,5 +117,5 @@ Nao enviar nem persistir input digitado, output gerado, JSON colado, Base64, has
 - Executar preflight `OPTIONS` com origem publica e confirmar headers CORS.
 - Repetir preflight com origem desconhecida e confirmar ausencia de `Access-Control-Allow-Origin`.
 - Validar em log temporario ou shell que `$request->ip()` representa o IP esperado atras de Cloudflare/Nginx.
-- Disparar 31 requisicoes no mesmo minuto para a mesma origem e confirmar `429`.
+- Disparar 31 requisicoes no mesmo minuto para o mesmo IP resolvido e confirmar `429`.
 - Repetir o teste de rate limit com dois IPs reais diferentes atras do proxy e confirmar que eles nao compartilham o mesmo bucket.

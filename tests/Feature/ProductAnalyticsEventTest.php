@@ -214,32 +214,36 @@ class ProductAnalyticsEventTest extends TestCase
 
     public function test_analytics_rate_limit_uses_forwarded_client_ip_when_proxy_is_trusted(): void
     {
-        TrustProxies::at('REMOTE_ADDR');
+        try {
+            TrustProxies::at('REMOTE_ADDR');
 
-        RateLimiter::clear('203.0.113.10');
-        RateLimiter::clear('203.0.113.11');
-        RateLimiter::clear('10.0.0.10');
+            RateLimiter::clear('203.0.113.10');
+            RateLimiter::clear('203.0.113.11');
+            RateLimiter::clear('10.0.0.10');
 
-        for ($attempt = 1; $attempt <= 30; $attempt++) {
+            for ($attempt = 1; $attempt <= 30; $attempt++) {
+                $this->withServerVariables([
+                    'REMOTE_ADDR' => '10.0.0.10',
+                ])->withHeaders([
+                    'X-Forwarded-For' => '203.0.113.10',
+                ])->postJson('/api/analytics/events', [
+                    'project' => 'rockcode-site',
+                    'event_name' => 'page_viewed',
+                    'page_path' => '/',
+                ])->assertCreated();
+            }
+
             $this->withServerVariables([
                 'REMOTE_ADDR' => '10.0.0.10',
             ])->withHeaders([
-                'X-Forwarded-For' => '203.0.113.10',
+                'X-Forwarded-For' => '203.0.113.11',
             ])->postJson('/api/analytics/events', [
                 'project' => 'rockcode-site',
                 'event_name' => 'page_viewed',
                 'page_path' => '/',
             ])->assertCreated();
+        } finally {
+            TrustProxies::flushState();
         }
-
-        $this->withServerVariables([
-            'REMOTE_ADDR' => '10.0.0.10',
-        ])->withHeaders([
-            'X-Forwarded-For' => '203.0.113.11',
-        ])->postJson('/api/analytics/events', [
-            'project' => 'rockcode-site',
-            'event_name' => 'page_viewed',
-            'page_path' => '/',
-        ])->assertCreated();
     }
 }
