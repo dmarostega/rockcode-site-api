@@ -15,10 +15,9 @@ class ProductAnalyticsEventController extends Controller
 
     public function store(StoreProductAnalyticsEventRequest $request): JsonResponse
     {
-        $event = $this->events->store($request->validated());
+        $this->events->store($request->validated());
 
         return response()->json([
-            'id' => $event->id,
             'status' => 'accepted',
         ], 201);
     }

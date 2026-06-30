@@ -75,7 +75,6 @@ Resposta:
 
 ```json
 {
-  "id": 1,
   "status": "accepted"
 }
 ```

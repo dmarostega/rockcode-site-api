@@ -45,6 +45,7 @@ class ProductAnalyticsEventService
     public function store(array $payload): ProductAnalyticsEvent
     {
         $payload['metadata'] = $this->sanitizeMetadata($payload['metadata'] ?? []);
+        $payload['occurred_at'] ??= now();
 
         return ProductAnalyticsEvent::create($payload);
     }
