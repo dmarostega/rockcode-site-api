@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ProductAnalyticsEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
@@ -54,6 +55,30 @@ class ProductAnalyticsEventTest extends TestCase
             'variant' => 'primary',
             'position' => 1,
         ], $event->metadata);
+    }
+
+    public function test_cors_preflight_allows_public_frontend_origin(): void
+    {
+        $this->optionsJson('/api/analytics/events', [], [
+            'Origin' => 'https://rockcodelabs.com.br',
+            'Access-Control-Request-Method' => 'POST',
+            'Access-Control-Request-Headers' => 'content-type, accept',
+        ])
+            ->assertNoContent()
+            ->assertHeader('Access-Control-Allow-Origin', 'https://rockcodelabs.com.br')
+            ->assertHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            ->assertHeader('Access-Control-Allow-Headers', 'content-type, accept, origin, x-requested-with');
+    }
+
+    public function test_cors_does_not_allow_unknown_origin(): void
+    {
+        $this->optionsJson('/api/analytics/events', [], [
+            'Origin' => 'https://example.com',
+            'Access-Control-Request-Method' => 'POST',
+            'Access-Control-Request-Headers' => 'content-type, accept',
+        ])
+            ->assertNoContent()
+            ->assertHeaderMissing('Access-Control-Allow-Origin');
     }
 
     public function test_event_without_occurred_at_uses_server_time(): void
@@ -185,5 +210,40 @@ class ProductAnalyticsEventTest extends TestCase
             'event_name' => 'page_viewed',
             'page_path' => '/',
         ])->assertTooManyRequests();
+    }
+
+    public function test_analytics_rate_limit_uses_forwarded_client_ip_when_proxy_is_trusted(): void
+    {
+        try {
+            TrustProxies::at('REMOTE_ADDR');
+
+            RateLimiter::clear('203.0.113.10');
+            RateLimiter::clear('203.0.113.11');
+            RateLimiter::clear('10.0.0.10');
+
+            for ($attempt = 1; $attempt <= 30; $attempt++) {
+                $this->withServerVariables([
+                    'REMOTE_ADDR' => '10.0.0.10',
+                ])->withHeaders([
+                    'X-Forwarded-For' => '203.0.113.10',
+                ])->postJson('/api/analytics/events', [
+                    'project' => 'rockcode-site',
+                    'event_name' => 'page_viewed',
+                    'page_path' => '/',
+                ])->assertCreated();
+            }
+
+            $this->withServerVariables([
+                'REMOTE_ADDR' => '10.0.0.10',
+            ])->withHeaders([
+                'X-Forwarded-For' => '203.0.113.11',
+            ])->postJson('/api/analytics/events', [
+                'project' => 'rockcode-site',
+                'event_name' => 'page_viewed',
+                'page_path' => '/',
+            ])->assertCreated();
+        } finally {
+            TrustProxies::flushState();
+        }
     }
 }
