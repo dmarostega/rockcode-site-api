@@ -79,6 +79,9 @@ class AdminProductAnalyticsDashboardTest extends TestCase
 
         $this->getWithAdminAuth('/admin')
             ->assertOk()
+            ->assertHeader('Cache-Control', 'must-revalidate, no-cache, no-store, private')
+            ->assertHeader('Pragma', 'no-cache')
+            ->assertHeader('X-Robots-Tag', 'noindex, nofollow, noarchive')
             ->assertSee('Total de eventos')
             ->assertSee('4')
             ->assertSee('2026-06-30')
@@ -104,6 +107,24 @@ class AdminProductAnalyticsDashboardTest extends TestCase
             ->assertSee('Ainda não há eventos persistidos para o período selecionado.')
             ->assertSee('Total de eventos')
             ->assertSee('0');
+    }
+
+    public function test_admin_dashboard_uses_default_period_when_period_is_invalid(): void
+    {
+        config([
+            'admin.username' => 'admin',
+            'admin.password' => 'secret',
+        ]);
+
+        $this->getWithAdminAuth('/admin?period=365')
+            ->assertOk()
+            ->assertSee('30')
+            ->assertDontSee('365 dias analisados');
+
+        $this->getWithAdminAuth('/admin?period=abc')
+            ->assertOk()
+            ->assertSee('30')
+            ->assertDontSee('abc');
     }
 
     private function getWithAdminAuth(string $uri): \Illuminate\Testing\TestResponse
