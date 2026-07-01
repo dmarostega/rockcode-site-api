@@ -23,7 +23,7 @@ class ProductAnalyticsDashboardController extends Controller
             'summary' => $dashboard->summarize($periodDays),
             'periods' => self::ALLOWED_PERIODS,
         ])->withHeaders([
-            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            'Cache-Control' => 'must-revalidate, no-cache, no-store, private',
             'Pragma' => 'no-cache',
             'X-Robots-Tag' => 'noindex, nofollow, noarchive',
         ]);
